@@ -40,56 +40,31 @@ class VAEs_A(nn.Module):
 	def forward(self, input, enc_state):
 		sh = F.relu(self.decoder.linear_h(self.sz))
 		H_attn = self.getAttn(sh, enc_state, 'decode') # M x batch
-		# print('attn: ', H_attn.size())
-		# print('enc_state: ', enc_state.size())
 		ch = H_attn.mm(enc_state) # M x hidden
 		sh_ = torch.tanh(self.context_linear(ch) + self.updatedec_linear(sh))
 		sx_ = torch.sigmoid(self.decoder.linear_x(sh_)) # M x V
 		out_attn = self.getAttn(sx_, input, 'out')
 		cx = out_attn.mm(input) # M x V
-		# print('cx: ', cx)
-		# print('sx: ', sx_)
 		# sx = self.wa * cx + (1-self.wa) * sx_
 		"""Lipiji implementation use tanh on top of linear function for last sx"""
 		# a = torch.tanh(self.out_linear(sx_))
 		sx = self.wa1 * cx + self.wa2 * sx_
-		# print('sx: ', sx)
-		# print(self.wa1)
 		return sh_, sx, out_attn
 		
 	def getAttn(self, s, enc_state, type):
 		input_size = enc_state.size(0)
 		asp_num, h_dim = s.size()
-		# e = Variable(torch.zeros(self.z_dim, input_size))
-		# print(e_hij.size())
-		# for i in range(self.z_dim):
-			# score = self.score(enc_state, s[i], type)
-			# print(score.size())
-			# e_hij[i] = score
 		if type == 'decode':
 			e = Variable(torch.zeros(asp_num, input_size)).cuda()
 			for i in range(asp_num):
 				h_ = s[i].unsqueeze(0).expand(input_size, h_dim)
 				M = torch.tanh(self.aspdec_linear(h_) + self.enc_linear(enc_state))
 				e[i] = self.v(M).t()
-				
-			# s_feat = self.aspdec_linear(s)
-			# s_feat_expanded = s.unsqueeze(1).expand(asp_num, input_size, h_dim).contiguous()
-			# enc_feat = self.enc_linear(enc_state)
-			# e = self.v(torch.tanh(enc_feat + s_feat_expanded))
-			# print('e size', e.shape)
 		elif type=='out':
 			e = s.mm(enc_state.t())
 		
 		return F.softmax(e.squeeze(),dim=1) 
 		
-	# def score(self, enc, s, type='decode'):
-		# if type=='decode':
-			# enc_feat = self.enc_linear(enc)
-			# dec_feat = self.aspdec_linear(s)
-			# return self.v(enc_feat + dec_feat)
-		# elif type=='out':
-			# return s @ enc.t()
 			
 class Model(object):
 	def __init__(self, x_dim, h_dim, z_dim, asp_num, model_file_path=None):
@@ -125,13 +100,9 @@ if __name__ == '__main__':
 		test_input = test_input.cuda()
 	
 	h_enc, z, mu, logvar = encoder_test(test_input)
-	# print(z)
-	# print(mu)
-	# print(logvar)
 	if USE_CUDA:
 		decoder_test.cuda()
 	recons = decoder_test(z)
-	# print(recons)
 	print(h_enc.size())
 	print(h_enc)
 	model_test = VAEs_A(decoder_test,3,5,15,10)
