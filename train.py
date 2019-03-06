@@ -81,12 +81,7 @@ class Train(object):
 			
 			h, z, mu, logvar = self.model.encoder(self.sents)
 			recons = self.model.decoder(z)
-			# print(recons)
 			sh, sx, ax = self.model.salattn(self.sents,h)
-			# print(sh)
-			# print(sx)
-			# print(sx)
-			# print(self.model.salattn.sz)
 			recons_z = torch.mm(ax.t(), self.model.salattn.sz)
 			recons_h = torch.mm(ax.t(), sh)
 			recons_x = torch.mm(ax.t(), sx)
@@ -96,9 +91,6 @@ class Train(object):
 			c = self.mse(recons_x, self.sents)
 			loss_sal = a + 400 * b + 800 * c
 			total_loss = loss_vae + loss_sal
-			# print(a)
-			# print(b)
-			# print(c)
 			total_loss.backward()
 			clip_grad_value_(self.params, 10)
 			self.optimizer.step()
